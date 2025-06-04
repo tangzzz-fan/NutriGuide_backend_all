@@ -1,0 +1,199 @@
+version: '3.8'
+
+services:
+  # ==================== 数据存储服务 ==================== #
+  
+  mongodb-dev:
+    image: mongo:7.0
+    container_name: nutriguide-mongodb-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: nutriguide_dev
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_dev_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - nutriguide-dev
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-dev:
+    image: redis:7.2-alpine
+    container_name: nutriguide-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - nutriguide-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ==================== 后端API服务 ==================== #
+  
+  backend-api-dev:
+    build:
+      context: ./backend_node
+      dockerfile: Dockerfile
+      target: development
+    container_name: nutriguide-backend-api-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:admin123@mongodb-dev:27017/nutriguide_dev?authSource=admin
+      JWT_SECRET: dev-jwt-secret-key-2024
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      REDIS_URL: redis://redis-dev:6379
+      LOG_LEVEL: debug
+      CORS_ORIGIN: http://localhost:3000,http://localhost:3001
+      PDF_PARSER_URL: http://pdf-parser-dev:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend_node:/app
+      - /app/node_modules
+      - backend_uploads_dev:/app/uploads
+    depends_on:
+      mongodb-dev:
+        condition: service_healthy
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - nutriguide-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: npm run start:dev
+
+  # ==================== PDF解析服务 ==================== #
+  
+  pdf-parser-dev:
+    build:
+      context: ./pdf_parser
+      dockerfile: Dockerfile
+      target: development
+    container_name: nutriguide-pdf-parser-dev
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: development
+      REDIS_URL: redis://redis-dev:6379
+      CELERY_BROKER_URL: redis://redis-dev:6379
+      CELERY_RESULT_BACKEND: redis://redis-dev:6379
+      LOG_LEVEL: DEBUG
+      MAX_FILE_SIZE: 10485760
+      ALLOWED_EXTENSIONS: pdf,PDF
+      BACKEND_API_URL: http://backend-api-dev:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./pdf_parser:/app
+      - pdf_uploads_dev:/app/uploads
+      - pdf_temp_dev:/app/temp
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - nutriguide-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  pdf-worker-dev:
+    build:
+      context: ./pdf_parser
+      dockerfile: Dockerfile
+      target: development
+    container_name: nutriguide-pdf-worker-dev
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: development
+      REDIS_URL: redis://redis-dev:6379
+      CELERY_BROKER_URL: redis://redis-dev:6379
+      CELERY_RESULT_BACKEND: redis://redis-dev:6379
+      LOG_LEVEL: DEBUG
+      BACKEND_API_URL: http://backend-api-dev:3000
+    volumes:
+      - ./pdf_parser:/app
+      - pdf_uploads_dev:/app/uploads
+      - pdf_temp_dev:/app/temp
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - nutriguide-dev
+    command: celery -A main.celery worker --loglevel=info --concurrency=2
+
+  # ==================== 开发工具 ==================== #
+  
+  mongo-express-dev:
+    image: mongo-express:1.0.2
+    container_name: nutriguide-mongo-express-dev
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin123@mongodb-dev:27017/
+      ME_CONFIG_BASICAUTH: false
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: true
+    ports:
+      - "8081:8081"
+    depends_on:
+      mongodb-dev:
+        condition: service_healthy
+    networks:
+      - nutriguide-dev
+
+  redis-commander-dev:
+    image: rediscommander/redis-commander:latest
+    container_name: nutriguide-redis-commander-dev
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis-dev:6379
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin123
+    ports:
+      - "8082:8081"
+    depends_on:
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - nutriguide-dev
+
+# ==================== 网络配置 ==================== #
+
+networks:
+  nutriguide-dev:
+    driver: bridge
+    name: nutriguide-dev-network
+
+# ==================== 数据卷配置 ==================== #
+
+volumes:
+  mongodb_dev_data:
+    name: nutriguide-mongodb-dev-data
+  redis_dev_data:
+    name: nutriguide-redis-dev-data  
+  backend_uploads_dev:
+    name: nutriguide-backend-uploads-dev
+  pdf_uploads_dev:
+    name: nutriguide-pdf-uploads-dev
+  pdf_temp_dev:
+    name: nutriguide-pdf-temp-dev 

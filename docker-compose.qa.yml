@@ -1,0 +1,203 @@
+version: '3.8'
+
+services:
+  # ==================== 数据存储服务 ==================== #
+  
+  mongodb-qa:
+    image: mongo:7.0
+    container_name: nutriguide-mongodb-qa
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: qa_admin_password_2024
+      MONGO_INITDB_DATABASE: nutriguide_qa
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_qa_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - nutriguide-qa
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-qa:
+    image: redis:7.2-alpine
+    container_name: nutriguide-redis-qa
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_qa_data:/data
+    networks:
+      - nutriguide-qa
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ==================== 后端API服务 ==================== #
+  
+  backend-api-qa:
+    build:
+      context: ./backend_node
+      dockerfile: Dockerfile
+      target: production
+    container_name: nutriguide-backend-api-qa
+    restart: unless-stopped
+    environment:
+      NODE_ENV: qa
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:qa_admin_password_2024@mongodb-qa:27017/nutriguide_qa?authSource=admin
+      JWT_SECRET: qa-jwt-secret-key-2024-secure
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      REDIS_URL: redis://redis-qa:6379
+      LOG_LEVEL: info
+      CORS_ORIGIN: http://localhost:3001,https://qa.nutriguide.com
+      PDF_PARSER_URL: http://pdf-parser-qa:8000
+    ports:
+      - "3001:3000"
+    volumes:
+      - backend_uploads_qa:/app/uploads
+    depends_on:
+      mongodb-qa:
+        condition: service_healthy
+      redis-qa:
+        condition: service_healthy
+    networks:
+      - nutriguide-qa
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # ==================== PDF解析服务 ==================== #
+  
+  pdf-parser-qa:
+    build:
+      context: ./pdf_parser
+      dockerfile: Dockerfile
+      target: production
+    container_name: nutriguide-pdf-parser-qa
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: qa
+      REDIS_URL: redis://redis-qa:6379
+      CELERY_BROKER_URL: redis://redis-qa:6379
+      CELERY_RESULT_BACKEND: redis://redis-qa:6379
+      LOG_LEVEL: INFO
+      MAX_FILE_SIZE: 10485760
+      ALLOWED_EXTENSIONS: pdf,PDF
+      BACKEND_API_URL: http://backend-api-qa:3000
+    ports:
+      - "8001:8000"
+    volumes:
+      - pdf_uploads_qa:/app/uploads
+      - pdf_temp_qa:/app/temp
+    depends_on:
+      redis-qa:
+        condition: service_healthy
+    networks:
+      - nutriguide-qa
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  pdf-worker-qa:
+    build:
+      context: ./pdf_parser
+      dockerfile: Dockerfile
+      target: production
+    container_name: nutriguide-pdf-worker-qa
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: qa
+      REDIS_URL: redis://redis-qa:6379
+      CELERY_BROKER_URL: redis://redis-qa:6379
+      CELERY_RESULT_BACKEND: redis://redis-qa:6379
+      LOG_LEVEL: INFO
+      BACKEND_API_URL: http://backend-api-qa:3000
+    volumes:
+      - pdf_uploads_qa:/app/uploads
+      - pdf_temp_qa:/app/temp
+    depends_on:
+      redis-qa:
+        condition: service_healthy
+    networks:
+      - nutriguide-qa
+    command: celery -A main.celery worker --loglevel=info --concurrency=2
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # ==================== 监控工具 ==================== #
+  
+  mongo-express-qa:
+    image: mongo-express:1.0.2
+    container_name: nutriguide-mongo-express-qa
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: qa_admin_password_2024
+      ME_CONFIG_MONGODB_URL: mongodb://admin:qa_admin_password_2024@mongodb-qa:27017/
+      ME_CONFIG_BASICAUTH: true
+      ME_CONFIG_BASICAUTH_USERNAME: qa_admin
+      ME_CONFIG_BASICAUTH_PASSWORD: qa_admin_ui_2024
+      ME_CONFIG_MONGODB_ENABLE_ADMIN: true
+    ports:
+      - "8083:8081"
+    depends_on:
+      mongodb-qa:
+        condition: service_healthy
+    networks:
+      - nutriguide-qa
+
+# ==================== 网络配置 ==================== #
+
+networks:
+  nutriguide-qa:
+    driver: bridge
+    name: nutriguide-qa-network
+
+# ==================== 数据卷配置 ==================== #
+
+volumes:
+  mongodb_qa_data:
+    name: nutriguide-mongodb-qa-data
+  redis_qa_data:
+    name: nutriguide-redis-qa-data
+  backend_uploads_qa:
+    name: nutriguide-backend-uploads-qa
+  pdf_uploads_qa:
+    name: nutriguide-pdf-uploads-qa
+  pdf_temp_qa:
+    name: nutriguide-pdf-temp-qa 

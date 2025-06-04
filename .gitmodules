@@ -1,0 +1,13 @@
+# NutriGuide Backend Git 子模块配置
+# 管理后端微服务仓库
+
+# backend_node submodule temporarily disabled due to empty repository
+# [submodule "backend_node"]
+# 	path = backend_node
+# 	url = git@github.com:tangzzz-fan/NutriGuide_backend_all.git
+# 	branch = main
+
+[submodule "pdf_parser"]
+	path = pdf_parser
+	url = git@github.com:tangzzz-fan/NutriGuide_pdf_parser.git
+	branch = main 
