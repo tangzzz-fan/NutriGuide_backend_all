@@ -9,9 +9,8 @@ NutriGuide 采用微服务架构，将功能模块化为独立的服务，提供
 | 组件 | 技术选择 | 替代方案 | 选择理由 |
 |------|----------|----------|----------|
 | **Backend API** | NestJS + TypeScript | Express.js, Fastify | 企业级框架，装饰器支持，内置依赖注入 |
-| **PDF Parser** | Python + FastAPI | Node.js, Go | 丰富的PDF处理库，AI/ML生态 |
 | **数据库** | MongoDB | PostgreSQL, MySQL | 文档型存储，适合营养数据的复杂结构 |
-| **消息队列** | Redis + Celery | RabbitMQ, Apache Kafka | 轻量级，支持多种数据结构 |
+| **缓存** | Redis | Memcached | 轻量级，支持多种数据结构 |
 | **容器化** | Docker + Compose | Kubernetes | 简化开发环境，易于部署 |
 
 ## 🌐 服务间通信架构
@@ -30,21 +29,14 @@ graph TB
 
     subgraph "Application Layer"
         E[Backend API<br/>NestJS]
-        F[PDF Parser Service<br/>FastAPI]
-    end
-
-    subgraph "Processing Layer"
-        G[Celery Workers]
-        H[Background Tasks]
     end
 
     subgraph "Data Layer"
         I[MongoDB<br/>Primary Database]
-        J[Redis<br/>Cache & Queue]
+        J[Redis<br/>Cache & Session]
     end
 
     subgraph "Storage Layer"
-        K[File Storage<br/>PDF Files]
         L[Logs<br/>Application Logs]
     end
 
@@ -52,52 +44,40 @@ graph TB
     B --> D
     C --> D
     D --> E
-    D --> F
     E --> I
     E --> J
-    F --> I
-    F --> J
-    F --> G
-    G --> H
-    G --> I
-    F --> K
     E --> L
-    F --> L
 ```
 
 ## 📊 数据流设计
 
-### 1. PDF解析流程
+### 1. API请求流程
 
 ```mermaid
 sequenceDiagram
     participant U as User/App
     participant B as Backend API
-    participant R as Redis Queue
-    participant P as PDF Parser
-    participant W as Celery Worker
+    participant R as Redis Cache
     participant DB as MongoDB
 
-    U->>B: 上传PDF文件
-    B->>R: 发送解析任务
-    B->>U: 返回任务ID
-    
-    R->>W: 分发任务
-    W->>P: 调用解析服务
-    P->>P: 解析PDF内容
-    P->>DB: 保存解析结果
-    
-    U->>B: 查询解析状态
-    B->>DB: 获取结果
-    B->>U: 返回解析数据
+    U->>B: API请求
+    B->>R: 检查缓存
+    alt 缓存命中
+        R->>B: 返回缓存数据
+        B->>U: 返回结果
+    else 缓存未命中
+        B->>DB: 查询数据库
+        DB->>B: 返回数据
+        B->>R: 更新缓存
+        B->>U: 返回结果
+    end
 ```
 
 ### 2. 数据同步机制
 
-- **实时同步**: 小文件(<5MB) 同步处理
-- **异步队列**: 大文件通过Celery队列处理
-- **状态追踪**: Redis存储处理状态
-- **结果缓存**: 解析结果缓存30天
+- **实时处理**: API请求实时响应
+- **缓存策略**: 热点数据Redis缓存
+- **数据一致性**: 事务保证数据完整性
 
 ## 🔒 安全架构
 
@@ -146,20 +126,11 @@ services:
           memory: 1G
         reservations:
           memory: 512M
-
-  pdf-parser:
-    deploy:
-      replicas: 2
-      
-  pdf-worker:
-    deploy:
-      replicas: 5  # 根据处理量调整
 ```
 
 ### 负载均衡策略
 
 - **Backend API**: Round-robin负载均衡
-- **PDF Workers**: 队列自动分发
 - **数据库**: 读写分离 (未来)
 
 ## 🚀 部署架构
@@ -210,18 +181,13 @@ services:
 
 1. **应用层缓存**
    - Redis缓存热点数据
-   - 解析结果缓存
    - 用户会话缓存
+   - API响应缓存
 
 2. **数据库优化**
    - 索引优化
    - 查询优化
    - 连接池配置
-
-3. **文件处理优化**
-   - 分块上传
-   - 压缩传输
-   - CDN加速
 
 ### 监控指标
 
@@ -230,7 +196,6 @@ services:
 | **系统性能** | CPU使用率 | <80% |
 | **内存使用** | 内存占用 | <85% |
 | **网络** | 响应时间 | <500ms |
-| **队列** | 任务积压 | <100 |
 | **错误率** | 5xx错误 | <1% |
 
 ## 🔧 运维指南
@@ -242,7 +207,7 @@ services:
 ./scripts/status.sh
 
 # 日志查看
-docker-compose logs -f --tail=100 pdf-parser-prod
+docker-compose logs -f --tail=100 backend-api-prod
 
 # 性能监控
 docker stats
@@ -256,7 +221,7 @@ docker stats
 1. **服务重启**
    ```bash
    # 重启特定服务
-   docker-compose restart pdf-parser-prod
+   docker-compose restart backend-api-prod
    ```
 
 2. **数据备份恢复**
@@ -268,20 +233,14 @@ docker stats
    docker exec mongodb-prod mongorestore /backup
    ```
 
-3. **扩容处理**
-   ```bash
-   # 临时扩容worker
-   docker-compose up --scale pdf-worker-prod=10 -d
-   ```
-
 ## 🔮 未来规划
 
 ### 短期目标 (1-3个月)
 
-- [ ] 增加更多PDF解析算法
-- [ ] 实现AI辅助数据提取
-- [ ] 添加批量处理功能
+- [ ] 增加API功能模块
+- [ ] 实现数据分析功能
 - [ ] 完善监控和告警
+- [ ] 性能优化
 
 ### 中期目标 (3-6个月)
 
@@ -302,8 +261,8 @@ docker stats
 ### 当前已知问题
 
 1. **性能优化**
-   - PDF解析速度有待提升
-   - 大文件处理内存占用较高
+   - API响应速度有待提升
+   - 数据库查询优化
 
 2. **监控完善**
    - 缺少分布式追踪

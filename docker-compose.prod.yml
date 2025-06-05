@@ -78,7 +78,6 @@ services:
       REDIS_URL: redis://redis-prod:6379
       LOG_LEVEL: warn
       CORS_ORIGIN: ${CORS_ORIGIN}
-      PDF_PARSER_URL: http://pdf-parser-prod:7802
       API_RATE_LIMIT: 1000
       FILE_UPLOAD_LIMIT: 50MB
     ports:
@@ -112,121 +111,6 @@ services:
         delay: 10s
         max_attempts: 3
 
-  # ==================== PDF解析服务 ==================== #
-  
-  pdf-parser-prod:
-    build:
-      context: ./pdf_parser
-      dockerfile: Dockerfile
-      target: production
-    container_name: nutriguide-pdf-parser-prod
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: production
-      REDIS_URL: redis://redis-prod:6379
-      CELERY_BROKER_URL: redis://redis-prod:6379
-      CELERY_RESULT_BACKEND: redis://redis-prod:6379
-      LOG_LEVEL: WARNING
-      MAX_FILE_SIZE: 52428800
-      ALLOWED_EXTENSIONS: pdf,PDF
-      BACKEND_API_URL: http://backend-api-prod:3000
-      MAX_WORKERS: 4
-      TASK_TIMEOUT: 300
-    ports:
-      - "7802:7802"
-    volumes:
-      - pdf_uploads_prod:/app/uploads
-      - pdf_temp_prod:/app/temp
-      - pdf_logs_prod:/app/logs
-    depends_on:
-      redis-prod:
-        condition: service_healthy
-    networks:
-      - nutriguide-prod
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7802/health"]
-      interval: 30s
-      timeout: 15s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
-    command: uvicorn main:app --host 0.0.0.0 --port 7802 --workers 2
-
-  pdf-worker-prod:
-    build:
-      context: ./pdf_parser
-      dockerfile: Dockerfile
-      target: production
-    container_name: nutriguide-pdf-worker-prod
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: production
-      REDIS_URL: redis://redis-prod:6379
-      CELERY_BROKER_URL: redis://redis-prod:6379
-      CELERY_RESULT_BACKEND: redis://redis-prod:6379
-      LOG_LEVEL: WARNING
-      BACKEND_API_URL: http://backend-api-prod:3000
-      MAX_WORKERS: 4
-      TASK_TIMEOUT: 300
-    volumes:
-      - pdf_uploads_prod:/app/uploads
-      - pdf_temp_prod:/app/temp
-      - pdf_logs_prod:/app/logs
-    depends_on:
-      redis-prod:
-        condition: service_healthy
-    networks:
-      - nutriguide-prod
-    command: celery -A main.celery worker --loglevel=warning --concurrency=4 --max-tasks-per-child=100
-    deploy:
-      replicas: 2
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
-      restart_policy:
-        condition: on-failure
-        delay: 10s
-        max_attempts: 3
-
-  # ==================== 监控与日志 ==================== #
-  
-  celery-flower-prod:
-    build:
-      context: ./pdf_parser
-      dockerfile: Dockerfile
-      target: production
-    container_name: nutriguide-celery-flower-prod
-    restart: unless-stopped
-    environment:
-      CELERY_BROKER_URL: redis://redis-prod:6379
-      FLOWER_BASIC_AUTH: ${FLOWER_AUTH_USER}:${FLOWER_AUTH_PASSWORD}
-    ports:
-      - "5555:5555"
-    depends_on:
-      redis-prod:
-        condition: service_healthy
-    networks:
-      - nutriguide-prod
-    command: celery -A main.celery flower --port=5555 --broker=redis://redis-prod:6379
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '0.25'
-        reservations:
-          memory: 256M
-          cpus: '0.1'
-
 # ==================== 网络配置 ==================== #
 
 networks:
@@ -255,21 +139,5 @@ volumes:
       device: '/var/lib/nutriguide/redis'
   backend_uploads_prod:
     name: nutriguide-backend-uploads-prod
-    driver: local
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: '/var/lib/nutriguide/uploads/backend'
   backend_logs_prod:
-    name: nutriguide-backend-logs-prod
-  pdf_uploads_prod:
-    name: nutriguide-pdf-uploads-prod
-    driver: local
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: '/var/lib/nutriguide/uploads/pdf'
-  pdf_temp_prod:
-    name: nutriguide-pdf-temp-prod
-  pdf_logs_prod:
-    name: nutriguide-pdf-logs-prod 
+    name: nutriguide-backend-logs-prod 

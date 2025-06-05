@@ -11,7 +11,6 @@ NutriGuide Backend 是智能营养指导平台的后端服务集合，采用微�
 ```
 backend/                        # 后端服务主仓库
 ├── backend_node/              # Git 子模块：NestJS API 服务
-├── pdf_parser/                # Git 子模块：PDF 解析服务
 ├── docker-compose.*.yml       # 多环境容器编排
 ├── scripts/                   # 运维和管理脚本
 │   ├── start.sh              # 服务启动脚本
@@ -29,7 +28,6 @@ backend/                        # 后端服务主仓库
 - **Docker Compose**: 2.0+
 - **Git**: 2.30+
 - **Node.js**: 18+ (本地开发)
-- **Python**: 3.11+ (本地开发)
 
 ### 一键部署
 
@@ -98,13 +96,6 @@ git push origin feature/new-feature
 - **端口**: 3000/3001/3002 (dev/qa/prod)
 - **仓库**: 独立 Git 仓库作为子模块
 
-### 🔹 PDF Parser (Python)
-- **路径**: `pdf_parser/`
-- **技术栈**: FastAPI + Python + Celery + Redis
-- **功能**: PDF 文档解析、营养标签识别、OCR 处理
-- **端口**: 8000/8001/8002 (dev/qa/prod)
-- **仓库**: 独立 Git 仓库作为子模块
-
 ## 🌐 服务端点
 
 ### 开发环境 (dev)
@@ -112,7 +103,6 @@ git push origin feature/new-feature
 | 服务 | 地址 | 说明 |
 |------|------|------|
 | 🌐 Backend API | http://localhost:3000 | NestJS 后端API |
-| 📄 PDF Parser | http://localhost:8000 | Python PDF解析服务 |
 | 🗄️ MongoDB Admin | http://localhost:8081 | 数据库管理界面 |
 | 🔴 Redis Commander | http://localhost:8082 | Redis 管理界面 |
 | 📚 API 文档 | http://localhost:3000/api/docs | Swagger API 文档 |
@@ -122,7 +112,6 @@ git push origin feature/new-feature
 | 服务 | 地址 | 说明 |
 |------|------|------|
 | 🌐 Backend API | http://localhost:3001 | QA环境后端API |
-| 📄 PDF Parser | http://localhost:8001 | QA环境PDF解析服务 |
 | 🗄️ MongoDB Admin | http://localhost:8083 | QA环境数据库管理 |
 
 ### 生产环境 (prod)
@@ -130,8 +119,6 @@ git push origin feature/new-feature
 | 服务 | 地址 | 说明 |
 |------|------|------|
 | 🌐 Backend API | http://localhost:3002 | 生产环境后端API |
-| 📄 PDF Parser | http://localhost:8002 | 生产环境PDF解析服务 |
-| 🌸 Celery Monitor | http://localhost:5555 | Celery任务监控 |
 
 ## 🐳 Docker 容器编排
 
@@ -146,8 +133,6 @@ git push origin feature/new-feature
 - **MongoDB**: 数据库服务 (27017/27018/27019)
 - **Redis**: 缓存和消息队列 (6379/6380/6381)
 - **Backend API**: NestJS 服务容器
-- **PDF Parser**: Python FastAPI 容器
-- **PDF Worker**: Celery 工作进程
 - **Monitoring**: 数据库和队列监控工具
 
 ## 🔧 本地开发
@@ -159,13 +144,6 @@ git push origin feature/new-feature
 cd backend_node
 npm install
 npm run start:dev
-
-# PDF Parser 服务  
-cd pdf_parser
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
 ```
 
 ### 完整服务栈开发
@@ -191,26 +169,6 @@ docker-compose -f docker-compose.dev.yml ps
 
 # API 健康检查
 curl http://localhost:3000/health
-curl http://localhost:8000/health
-```
-
-### 集成测试
-
-```bash
-# 启动测试环境
-./scripts/start.sh qa
-
-# 运行API测试
-curl -X POST http://localhost:3001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password"}'
-
-# PDF解析测试
-curl -X POST http://localhost:8001/api/parse \
-  -F "file=@test.pdf"
-
-# 停止测试环境
-./scripts/stop.sh qa
 ```
 
 ## 📊 监控与日志
@@ -223,14 +181,12 @@ docker-compose -f docker-compose.dev.yml logs -f
 
 # 查看特定服务日志
 docker-compose -f docker-compose.dev.yml logs -f backend-api-dev
-docker-compose -f docker-compose.dev.yml logs -f pdf-parser-dev
 ```
 
 ### 性能监控
 
 - **MongoDB**: Mongo Express (8081/8083)
 - **Redis**: Redis Commander (8082)
-- **Celery**: Flower Monitor (5555, 仅生产环境)
 - **Application Logs**: 容器日志聚合
 
 ## 🚀 部署
@@ -291,7 +247,6 @@ export CORS_ORIGIN="https://nutriguide.com"
 ### 代码规范
 
 - **Backend Node**: ESLint + Prettier + TypeScript
-- **PDF Parser**: Black + Flake8 + Type Hints
 - **Docker**: Multi-stage builds, 安全基线
 - **Git**: Conventional Commits 规范
 

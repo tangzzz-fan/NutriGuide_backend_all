@@ -59,7 +59,6 @@ services:
       REDIS_URL: redis://redis-qa:6379
       LOG_LEVEL: info
       CORS_ORIGIN: http://localhost:3001,https://qa.nutriguide.com
-      PDF_PARSER_URL: http://pdf-parser-qa:7801
     ports:
       - "3001:3000"
     volumes:
@@ -76,80 +75,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
-
-  # ==================== PDF解析服务 ==================== #
-  
-  pdf-parser-qa:
-    build:
-      context: ./pdf_parser
-      dockerfile: Dockerfile
-      target: production
-    container_name: nutriguide-pdf-parser-qa
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: qa
-      REDIS_URL: redis://redis-qa:6379
-      CELERY_BROKER_URL: redis://redis-qa:6379
-      CELERY_RESULT_BACKEND: redis://redis-qa:6379
-      LOG_LEVEL: INFO
-      MAX_FILE_SIZE: 10485760
-      ALLOWED_EXTENSIONS: pdf,PDF
-      BACKEND_API_URL: http://backend-api-qa:3000
-    ports:
-      - "7801:7801"
-    volumes:
-      - pdf_uploads_qa:/app/uploads
-      - pdf_temp_qa:/app/temp
-    depends_on:
-      redis-qa:
-        condition: service_healthy
-    networks:
-      - nutriguide-qa
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7801/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '0.5'
-        reservations:
-          memory: 512M
-          cpus: '0.25'
-
-  pdf-worker-qa:
-    build:
-      context: ./pdf_parser
-      dockerfile: Dockerfile
-      target: production
-    container_name: nutriguide-pdf-worker-qa
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: qa
-      REDIS_URL: redis://redis-qa:6379
-      CELERY_BROKER_URL: redis://redis-qa:6379
-      CELERY_RESULT_BACKEND: redis://redis-qa:6379
-      LOG_LEVEL: INFO
-      BACKEND_API_URL: http://backend-api-qa:3000
-    volumes:
-      - pdf_uploads_qa:/app/uploads
-      - pdf_temp_qa:/app/temp
-    depends_on:
-      redis-qa:
-        condition: service_healthy
-    networks:
-      - nutriguide-qa
-    command: celery -A main.celery worker --loglevel=info --concurrency=2
     deploy:
       resources:
         limits:
@@ -196,8 +121,4 @@ volumes:
   redis_qa_data:
     name: nutriguide-redis-qa-data
   backend_uploads_qa:
-    name: nutriguide-backend-uploads-qa
-  pdf_uploads_qa:
-    name: nutriguide-pdf-uploads-qa
-  pdf_temp_qa:
-    name: nutriguide-pdf-temp-qa 
+    name: nutriguide-backend-uploads-qa 

@@ -52,149 +52,28 @@ log_step() {
 
 show_usage() {
     cat << EOF
-使用方法: $0 [环境] [选项]
+🍎 NutriGuide 后端服务停止脚本
+
+使用方法:
+  $0 [environment] [options]
 
 环境:
-  dev       停止开发环境 (默认)
-  qa        停止QA测试环境
-  prod      停止生产环境
-  all       停止所有环境
+  dev      停止开发环境服务
+  qa       停止QA测试环境服务
+  prod     停止生产环境服务
+  all      停止所有环境服务
 
 选项:
-  --volumes     同时删除数据卷 (谨慎使用)
-  --images      同时删除相关镜像
-  --force       强制停止，不等待优雅关闭
-  --clean       停止后进行系统清理
-  --pdf-parser  同时停止 PDF Parser 服务
-  --only-pdf-parser 仅停止 PDF Parser 服务
-  --help        显示此帮助信息
+  --cleanup        清理无用的容器、镜像和数据卷
+  --force          强制停止并清理
+  --help           显示此帮助信息
 
 示例:
-  $0 dev                     # 停止开发环境
-  $0 dev --pdf-parser        # 停止开发环境并停止PDF Parser
-  $0 --only-pdf-parser       # 仅停止PDF Parser服务
-  $0 prod --force            # 强制停止生产环境
-  $0 all --clean             # 停止所有环境并清理
-  $0 qa --volumes --images   # 停止QA环境并删除数据和镜像
+  $0 dev                   # 停止开发环境服务
+  $0 all --cleanup         # 停止所有服务并清理
+  $0 prod --force          # 强制停止生产环境
 
 EOF
-}
-
-# ==================== PDF Parser 相关函数 ==================== #
-
-stop_pdf_parser() {
-    log_step "停止 PDF Parser 服务..."
-    
-    local pdf_parser_dir="$BACKEND_DIR/pdf_parser"
-    
-    if [ ! -d "$pdf_parser_dir" ]; then
-        log_warn "PDF Parser 目录不存在: $pdf_parser_dir"
-        return
-    fi
-    
-    cd "$pdf_parser_dir"
-    
-    # 检查是否有停止脚本
-    if [ -f "stop.sh" ]; then
-        log_info "使用 PDF Parser 停止脚本..."
-        chmod +x stop.sh
-        if [ "$FORCE_STOP" = true ]; then
-            ./stop.sh --force
-        else
-            ./stop.sh
-        fi
-    else
-        # 手动停止 PDF Parser 进程
-        log_info "手动停止 PDF Parser 进程..."
-        
-        # 停止API服务
-        if [ -f "logs/api.pid" ]; then
-            local api_pid=$(cat logs/api.pid)
-            if ps -p $api_pid > /dev/null 2>&1; then
-                log_info "停止 PDF Parser API (PID: $api_pid)..."
-                if [ "$FORCE_STOP" = true ]; then
-                    kill -9 $api_pid 2>/dev/null || true
-                else
-                    kill $api_pid 2>/dev/null || true
-                fi
-            fi
-            rm -f logs/api.pid
-        fi
-        
-        # 停止Celery Worker
-        if [ -f "logs/worker.pid" ]; then
-            local worker_pid=$(cat logs/worker.pid)
-            if ps -p $worker_pid > /dev/null 2>&1; then
-                log_info "停止 Celery Worker (PID: $worker_pid)..."
-                if [ "$FORCE_STOP" = true ]; then
-                    kill -9 $worker_pid 2>/dev/null || true
-                else
-                    kill $worker_pid 2>/dev/null || true
-                fi
-            fi
-            rm -f logs/worker.pid
-        fi
-        
-        # 停止Celery Beat
-        if [ -f "logs/beat.pid" ]; then
-            local beat_pid=$(cat logs/beat.pid)
-            if ps -p $beat_pid > /dev/null 2>&1; then
-                log_info "停止 Celery Beat (PID: $beat_pid)..."
-                if [ "$FORCE_STOP" = true ]; then
-                    kill -9 $beat_pid 2>/dev/null || true
-                else
-                    kill $beat_pid 2>/dev/null || true
-                fi
-            fi
-            rm -f logs/beat.pid
-        fi
-        
-        # 检查端口并停止相关进程
-        local ports=("7800" "7801" "7802")
-        for port in "${ports[@]}"; do
-            if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-                local pids=$(lsof -t -i:$port)
-                for pid in $pids; do
-                    local cmd=$(ps -p $pid -o comm= 2>/dev/null || echo "")
-                    if [[ "$cmd" == "python"* ]] || [[ "$cmd" == "uvicorn"* ]] || [[ "$cmd" == "celery"* ]]; then
-                        log_info "停止端口 $port 上的进程 (PID: $pid)..."
-                        if [ "$FORCE_STOP" = true ]; then
-                            kill -9 $pid 2>/dev/null || true
-                        else
-                            kill $pid 2>/dev/null || true
-                        fi
-                    fi
-                done
-            fi
-        done
-    fi
-    
-    # 等待进程停止
-    sleep 2
-    
-    # 验证停止状态
-    local pdf_stopped=true
-    local ports=("7800" "7801" "7802")
-    for port in "${ports[@]}"; do
-        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-            local pids=$(lsof -t -i:$port)
-            for pid in $pids; do
-                local cmd=$(ps -p $pid -o comm= 2>/dev/null || echo "")
-                if [[ "$cmd" == "python"* ]] || [[ "$cmd" == "uvicorn"* ]] || [[ "$cmd" == "celery"* ]]; then
-                    pdf_stopped=false
-                    break 2
-                fi
-            done
-        fi
-    done
-    
-    if [ "$pdf_stopped" = true ]; then
-        log_info "✓ PDF Parser 服务已停止"
-    else
-        log_warn "PDF Parser 部分服务可能仍在运行"
-    fi
-    
-    cd "$BACKEND_DIR"
 }
 
 # ==================== 主要函数 ==================== #
@@ -301,31 +180,6 @@ show_remaining_resources() {
     local volumes=$(docker volume ls --format "table {{.Name}}" | grep -E "(nutriguide|nutriguide)" || echo "无相关数据卷")
     echo "$volumes"
     
-    # PDF Parser 服务状态
-    echo ""
-    echo -e "${CYAN}======================================${NC}"
-    echo -e "${CYAN}  PDF Parser 服务状态${NC}"
-    echo -e "${CYAN}======================================${NC}"
-    
-    local pdf_running=false
-    local ports=("7800" "7801" "7802")
-    for port in "${ports[@]}"; do
-        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-            local pids=$(lsof -t -i:$port)
-            for pid in $pids; do
-                local cmd=$(ps -p $pid -o comm= 2>/dev/null || echo "")
-                if [[ "$cmd" == "python"* ]] || [[ "$cmd" == "uvicorn"* ]] || [[ "$cmd" == "celery"* ]]; then
-                    echo -e "${RED}✗ 端口 $port: PDF Parser 服务仍在运行 (PID: $pid)${NC}"
-                    pdf_running=true
-                fi
-            done
-        fi
-    done
-    
-    if [ "$pdf_running" = false ]; then
-        echo -e "${GREEN}✓ PDF Parser 服务已完全停止${NC}"
-    fi
-    
     echo ""
 }
 
@@ -336,8 +190,6 @@ REMOVE_VOLUMES=false
 REMOVE_IMAGES=false
 FORCE_STOP=false
 CLEAN_SYSTEM=false
-STOP_PDF_PARSER=false
-ONLY_PDF_PARSER=false
 
 # 解析参数
 while [[ $# -gt 0 ]]; do
@@ -346,28 +198,14 @@ while [[ $# -gt 0 ]]; do
             ENVIRONMENT="$1"
             shift
             ;;
-        --volumes)
+        --cleanup)
             REMOVE_VOLUMES=true
-            shift
-            ;;
-        --images)
             REMOVE_IMAGES=true
+            CLEAN_SYSTEM=true
             shift
             ;;
         --force)
             FORCE_STOP=true
-            shift
-            ;;
-        --clean)
-            CLEAN_SYSTEM=true
-            shift
-            ;;
-        --pdf-parser)
-            STOP_PDF_PARSER=true
-            shift
-            ;;
-        --only-pdf-parser)
-            ONLY_PDF_PARSER=true
             shift
             ;;
         --help)
@@ -388,20 +226,11 @@ done
 main() {
     print_header
     
-    # 检查依赖 (仅在非 PDF Parser only 模式下)
-    if [ "$ONLY_PDF_PARSER" = false ]; then
-        check_dependencies
-    fi
+    # 检查依赖
+    check_dependencies
     
     # 切换到后端目录
     cd "$BACKEND_DIR"
-    
-    # 仅停止 PDF Parser
-    if [ "$ONLY_PDF_PARSER" = true ]; then
-        stop_pdf_parser
-        show_remaining_resources
-        return
-    fi
     
     # 停止主要服务
     case $ENVIRONMENT in
@@ -412,11 +241,6 @@ main() {
             stop_environment "$ENVIRONMENT"
             ;;
     esac
-    
-    # 停止 PDF Parser (如果指定)
-    if [ "$STOP_PDF_PARSER" = true ]; then
-        stop_pdf_parser
-    fi
     
     # 删除镜像
     if [ "$REMOVE_IMAGES" = true ]; then

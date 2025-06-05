@@ -59,7 +59,6 @@ services:
       REDIS_URL: redis://redis-dev:6379
       LOG_LEVEL: debug
       CORS_ORIGIN: http://localhost:3000,http://localhost:3001
-      PDF_PARSER_URL: http://pdf-parser-dev:7800
     ports:
       - "3000:3000"
     volumes:
@@ -79,67 +78,6 @@ services:
       timeout: 10s
       retries: 3
     command: npm run start:dev
-
-  # ==================== PDF解析服务 ==================== #
-  
-  pdf-parser-dev:
-    build:
-      context: ./pdf_parser
-      dockerfile: Dockerfile
-      target: development
-    container_name: nutriguide-pdf-parser-dev
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: development
-      REDIS_URL: redis://redis-dev:6379
-      CELERY_BROKER_URL: redis://redis-dev:6379
-      CELERY_RESULT_BACKEND: redis://redis-dev:6379
-      LOG_LEVEL: DEBUG
-      MAX_FILE_SIZE: 10485760
-      ALLOWED_EXTENSIONS: pdf,PDF
-      BACKEND_API_URL: http://backend-api-dev:3000
-    ports:
-      - "7800:7800"
-    volumes:
-      - ./pdf_parser:/app
-      - pdf_uploads_dev:/app/uploads
-      - pdf_temp_dev:/app/temp
-    depends_on:
-      redis-dev:
-        condition: service_healthy
-    networks:
-      - nutriguide-dev
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7800/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    command: uvicorn main:app --host 0.0.0.0 --port 7800 --reload
-
-  pdf-worker-dev:
-    build:
-      context: ./pdf_parser
-      dockerfile: Dockerfile
-      target: development
-    container_name: nutriguide-pdf-worker-dev
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: development
-      REDIS_URL: redis://redis-dev:6379
-      CELERY_BROKER_URL: redis://redis-dev:6379
-      CELERY_RESULT_BACKEND: redis://redis-dev:6379
-      LOG_LEVEL: DEBUG
-      BACKEND_API_URL: http://backend-api-dev:3000
-    volumes:
-      - ./pdf_parser:/app
-      - pdf_uploads_dev:/app/uploads
-      - pdf_temp_dev:/app/temp
-    depends_on:
-      redis-dev:
-        condition: service_healthy
-    networks:
-      - nutriguide-dev
-    command: celery -A main.celery worker --loglevel=info --concurrency=2
 
   # ==================== 开发工具 ==================== #
   
@@ -192,8 +130,4 @@ volumes:
   redis_dev_data:
     name: nutriguide-redis-dev-data  
   backend_uploads_dev:
-    name: nutriguide-backend-uploads-dev
-  pdf_uploads_dev:
-    name: nutriguide-pdf-uploads-dev
-  pdf_temp_dev:
-    name: nutriguide-pdf-temp-dev 
+    name: nutriguide-backend-uploads-dev 

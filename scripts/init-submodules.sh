@@ -140,10 +140,10 @@ clean_submodules() {
     git submodule deinit --all -f
     
     # 删除子模块目录
-    rm -rf backend_node pdf_parser
+    rm -rf backend_node
     
     # 清理 .git/modules
-    rm -rf .git/modules/backend_node .git/modules/pdf_parser
+    rm -rf .git/modules/backend_node
     
     # 重新初始化
     init_submodules
