@@ -59,7 +59,7 @@ services:
       REDIS_URL: redis://redis-qa:6379
       LOG_LEVEL: info
       CORS_ORIGIN: http://localhost:3001,https://qa.nutriguide.com
-      PDF_PARSER_URL: http://pdf-parser-qa:8000
+      PDF_PARSER_URL: http://pdf-parser-qa:7801
     ports:
       - "3001:3000"
     volumes:
@@ -104,7 +104,7 @@ services:
       ALLOWED_EXTENSIONS: pdf,PDF
       BACKEND_API_URL: http://backend-api-qa:3000
     ports:
-      - "8001:8000"
+      - "7801:7801"
     volumes:
       - pdf_uploads_qa:/app/uploads
       - pdf_temp_qa:/app/temp
@@ -114,7 +114,7 @@ services:
     networks:
       - nutriguide-qa
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:7801/health"]
       interval: 30s
       timeout: 10s
       retries: 3

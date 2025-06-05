@@ -78,7 +78,7 @@ services:
       REDIS_URL: redis://redis-prod:6379
       LOG_LEVEL: warn
       CORS_ORIGIN: ${CORS_ORIGIN}
-      PDF_PARSER_URL: http://pdf-parser-prod:8000
+      PDF_PARSER_URL: http://pdf-parser-prod:7802
       API_RATE_LIMIT: 1000
       FILE_UPLOAD_LIMIT: 50MB
     ports:
@@ -133,7 +133,7 @@ services:
       MAX_WORKERS: 4
       TASK_TIMEOUT: 300
     ports:
-      - "8002:8000"
+      - "7802:7802"
     volumes:
       - pdf_uploads_prod:/app/uploads
       - pdf_temp_prod:/app/temp
@@ -144,7 +144,7 @@ services:
     networks:
       - nutriguide-prod
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:7802/health"]
       interval: 30s
       timeout: 15s
       retries: 5
@@ -156,6 +156,7 @@ services:
         reservations:
           memory: 1G
           cpus: '0.5'
+    command: uvicorn main:app --host 0.0.0.0 --port 7802 --workers 2
 
   pdf-worker-prod:
     build:
