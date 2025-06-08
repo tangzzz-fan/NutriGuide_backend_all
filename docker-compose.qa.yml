@@ -84,42 +84,6 @@ services:
           memory: 512M
           cpus: '0.25'
 
-  # ==================== 前端Web服务 ==================== #
-
-  frontend-web-qa:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: runner
-      args:
-        NODE_ENV: qa
-        VITE_APP_ENV: qa
-        VITE_API_BASE_URL: http://localhost:4001
-        VITE_APP_NAME: NutriGuide
-        VITE_APP_VERSION: 1.0.0
-        VITE_DEBUG: false
-    container_name: nutriguide-frontend-web-qa
-    restart: unless-stopped
-    ports:
-      - "4001:80"
-    depends_on:
-      - backend-api-qa
-    networks:
-      - nutriguide-qa
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-        reservations:
-          memory: 128M
-          cpus: '0.1'
-
   # ==================== 监控工具 ==================== #
   
   mongo-express-qa:

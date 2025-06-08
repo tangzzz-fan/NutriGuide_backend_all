@@ -345,7 +345,7 @@ main() {
     
     # 检查依赖
     check_dependencies
-    check_git_submodules
+    # check_git_submodules
     
     # 拉取镜像
     if [ "$PULL_IMAGES" = true ]; then

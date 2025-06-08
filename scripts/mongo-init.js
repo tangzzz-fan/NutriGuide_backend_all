@@ -55,14 +55,6 @@ db.mealrecords.createIndex({ date: 1 });
 db.mealrecords.createIndex({ mealType: 1 });
 db.mealrecords.createIndex({ userId: 1, date: 1 });
 
-print('📄 创建PDF解析相关集合...');
-
-// PDF解析任务集合
-db.createCollection('pdftasks');
-db.pdftasks.createIndex({ taskId: 1 }, { unique: true });
-db.pdftasks.createIndex({ userId: 1 });
-db.pdftasks.createIndex({ status: 1 });
-db.pdftasks.createIndex({ createdAt: 1 });
 
 // 仅在开发环境插入示例数据
 if (environment === 'development') {
