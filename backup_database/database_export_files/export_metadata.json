@@ -1,0 +1,146 @@
+{
+  "export_info": {
+    "database": "obesity_guide",
+    "export_time": "2025-06-07T04:03:25.359981",
+    "total_collections": 27,
+    "exporter": "CompleteDBExporter v1.0",
+    "total_records": 381
+  },
+  "collections": {
+    "tcm_food_medicine_recommendations": {
+      "filename": "tcm_food_medicine_recommendations.json.gz",
+      "count": 5,
+      "size_kb": 1.0947265625
+    },
+    "DietaryPrinciples": {
+      "filename": "DietaryPrinciples.json.gz",
+      "count": 6,
+      "size_kb": 0.96875
+    },
+    "MealPlanRecommendations": {
+      "filename": "MealPlanRecommendations.json.gz",
+      "count": 0,
+      "size_kb": 0.1630859375
+    },
+    "SeasonalMealPlans": {
+      "filename": "SeasonalMealPlans.json.gz",
+      "count": 24,
+      "size_kb": 10.45703125
+    },
+    "DietaryRecommendations": {
+      "filename": "DietaryRecommendations.json.gz",
+      "count": 4,
+      "size_kb": 1.03515625
+    },
+    "tcm_dietary_recipes": {
+      "filename": "tcm_dietary_recipes.json.gz",
+      "count": 15,
+      "size_kb": 3.2060546875
+    },
+    "StructuredMealPlans": {
+      "filename": "StructuredMealPlans.json.gz",
+      "count": 35,
+      "size_kb": 20.5009765625
+    },
+    "ObesityStandards": {
+      "filename": "ObesityStandards.json.gz",
+      "count": 2,
+      "size_kb": 0.78515625
+    },
+    "FoodMedicineSubstances": {
+      "filename": "FoodMedicineSubstances.json.gz",
+      "count": 75,
+      "size_kb": 4.677734375
+    },
+    "obesity_standards": {
+      "filename": "obesity_standards.json.gz",
+      "count": 5,
+      "size_kb": 1.04296875
+    },
+    "FoodChoicesGuide": {
+      "filename": "FoodChoicesGuide.json.gz",
+      "count": 9,
+      "size_kb": 1.8173828125
+    },
+    "food_selection_guide_complete": {
+      "filename": "food_selection_guide_complete.json.gz",
+      "count": 4,
+      "size_kb": 1.19921875
+    },
+    "users": {
+      "filename": "users.json.gz",
+      "count": 1,
+      "size_kb": 0.40625
+    },
+    "FoodExchangeItems": {
+      "filename": "FoodExchangeItems.json.gz",
+      "count": 27,
+      "size_kb": 2.9951171875
+    },
+    "meal_plans": {
+      "filename": "meal_plans.json.gz",
+      "count": 84,
+      "size_kb": 42.5166015625
+    },
+    "energy_calculation_formulas": {
+      "filename": "energy_calculation_formulas.json.gz",
+      "count": 4,
+      "size_kb": 0.8369140625
+    },
+    "RegionalFoodAvailability": {
+      "filename": "RegionalFoodAvailability.json.gz",
+      "count": 6,
+      "size_kb": 0.8525390625
+    },
+    "food_category_advice_detailed": {
+      "filename": "food_category_advice_detailed.json.gz",
+      "count": 2,
+      "size_kb": 1.0693359375
+    },
+    "SampleMealPlans": {
+      "filename": "SampleMealPlans.json.gz",
+      "count": 3,
+      "size_kb": 1.552734375
+    },
+    "FoodCategoryAdvice": {
+      "filename": "FoodCategoryAdvice.json.gz",
+      "count": 7,
+      "size_kb": 3.3740234375
+    },
+    "TcmDietaryRecipes": {
+      "filename": "TcmDietaryRecipes.json.gz",
+      "count": 3,
+      "size_kb": 1.0625
+    },
+    "TcmObesitySyndromes": {
+      "filename": "TcmObesitySyndromes.json.gz",
+      "count": 2,
+      "size_kb": 1.44140625
+    },
+    "intensity_levels": {
+      "filename": "intensity_levels.json.gz",
+      "count": 4,
+      "size_kb": 0.4990234375
+    },
+    "ReferenceTables": {
+      "filename": "ReferenceTables.json.gz",
+      "count": 1,
+      "size_kb": 0.6005859375
+    },
+    "GuideIntroduction": {
+      "filename": "GuideIntroduction.json.gz",
+      "count": 2,
+      "size_kb": 0.7802734375
+    },
+    "physical_activities": {
+      "filename": "physical_activities.json.gz",
+      "count": 36,
+      "size_kb": 1.39453125
+    },
+    "food_exchange_table_complete": {
+      "filename": "food_exchange_table_complete.json.gz",
+      "count": 15,
+      "size_kb": 1.740234375
+    }
+  }
+}
