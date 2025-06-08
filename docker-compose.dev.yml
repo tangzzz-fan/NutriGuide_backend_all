@@ -41,7 +41,7 @@ services:
       retries: 5
 
   # ==================== 后端API服务 ==================== #
-  
+
   backend-api-dev:
     build:
       context: ./backend_node
@@ -58,7 +58,7 @@ services:
       JWT_REFRESH_EXPIRES_IN: 7d
       REDIS_URL: redis://redis-dev:6379
       LOG_LEVEL: debug
-      CORS_ORIGIN: http://localhost:3000,http://localhost:3001
+      CORS_ORIGIN: http://localhost:4000,http://localhost:4001
     ports:
       - "3000:3000"
     volumes:
@@ -78,6 +78,34 @@ services:
       timeout: 10s
       retries: 3
     command: npm run start:dev
+
+  # ==================== 前端Web服务 ==================== #
+
+  frontend-web-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        NODE_ENV: development
+        VITE_APP_ENV: development
+        VITE_API_BASE_URL: http://localhost:4000
+        VITE_APP_NAME: NutriGuide
+        VITE_APP_VERSION: 1.0.0
+        VITE_DEBUG: true
+    container_name: nutriguide-frontend-web-dev
+    restart: unless-stopped
+    ports:
+      - "4000:80"
+    depends_on:
+      - backend-api-dev
+    networks:
+      - nutriguide-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # ==================== 开发工具 ==================== #
   

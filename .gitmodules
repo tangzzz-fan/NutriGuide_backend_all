@@ -7,10 +7,11 @@
 	url = git@github.com:tangzzz-fan/NutriGuide_backend.git
 	branch = main
 
-[submodule "pdf_parser"]
-	path = pdf_parser
-	url = git@github.com:tangzzz-fan/NutriGuide_pdf_parser.git
-	branch = main 
+# [submodule "pdf_parser"]
+# 	path = pdf_parser
+# 	url = git@github.com:tangzzz-fan/NutriGuide_pdf_parser.git
+# 	branch = main 
+
 [submodule "frontend"]
 	path = frontend
 	url = git@github.com:tangzzz-fan/NutriGuide_frontend.git
